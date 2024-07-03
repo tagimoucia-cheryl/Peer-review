@@ -1,0 +1,70 @@
+#INSTALLING AND SETUP
+install.packages("ggplot2", dependencies = TRUE)
+install.packages("Hmisc", dependencies = TRUE)
+
+
+library(dplyr)
+library(tidyr)
+library(Hmisc)
+library(metafor)
+library(ggplot2)
+library(forestplot)
+library(stringr)
+
+#Load and view files
+mat <- read.csv(file.choose()) #individual studies csv
+View(mat)
+str(mat)
+names(mat)
+
+#trim imported set
+mdf <- mat %>%
+  select(Country, Women..n.., Pregnancies..n.., Age,
+         Age.1,Overall.Diagnosis)
+#rename vectors
+mdf <- rename(mdf, country = Country)
+mdf <- rename(mdf, women = Women..n..)
+mdf <- rename(mdf, preg = Pregnancies..n..)
+mdf <- rename(mdf, mean_dirty = Age)
+mdf <- rename(mdf, median_dirty = Age.1)
+mdf <- rename(mdf, dx = Overall.Diagnosis)
+
+#reclass vectors
+str(mdf)
+mdf$preg <- as.numeric(mdf$preg)
+mdf$women <- as.numeric(mdf$women)
+
+
+#new vectors: isolate mean and sd values, pop 'n' value
+mdf$mean <- readr::parse_number(mdf$mean_dirty)
+mdf$sd <- as.numeric(str_extract(mdf$mean_dirty, '(?<=±\\s\\s)[:digit:].\\d'))
+
+mdf$n <- if_else(is.na(mdf$preg), mdf$women, mdf$preg)
+
+View(mdf)
+
+#weighted mean
+
+mdf_trim <- mdf %>% #remove missing values
+  filter(!is.na(mean)) %>% #remove studies with no mean
+  filter(!is.na(n)) #remove studies with no population size
+
+weighted.mean(mdf_trim$mean, mdf_trim$n, na.rm= TRUE)
+wtd.var(mdf_trim$mean, mdf_trim$n, na.rm= TRUE)
+
+tail(mdf_all)
+
+#population 
+sum(mdf$women, na.rm = TRUE) #51290
+sum(mdf$preg, na.rm = TRUE) #22851
+
+#countries
+cc <- as.data.frame(unique(str_to_lower(mdf$country))) #36 different countries or groups
+cc
+
+#conditions
+names(mdf)
+dd <- as.data.frame(unique(mdf$dx))
+dd #45 distinct populations
+
+table(mdf$dx)
